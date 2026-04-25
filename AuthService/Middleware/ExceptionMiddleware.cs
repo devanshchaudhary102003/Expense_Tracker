@@ -17,8 +17,13 @@ namespace AuthService.Middleware
 
         public async Task InvokeAsync(HttpContext ctx)
         {
-            try { await _next(ctx); }
-            catch (Exception ex) { await HandleAsync(ctx,ex);}
+            try { 
+                    await _next(ctx); 
+                }
+            catch (Exception ex) 
+                {
+                    await HandleAsync(ctx,ex);
+                }
         }
 
         private async Task HandleAsync(HttpContext ctx, Exception ex)

@@ -70,7 +70,7 @@ namespace AuthService.Services
             return BuildAuthResponse(user);   
         }
 
-        public async Task<AuthResponseDTO> LoginOrRegisterExternalAsync(string provider, string externalId, string email, string fullName, string? avatarUrl)
+        public async Task<AuthResponseDTO> LoginOrRegisterExternalAsync(string provider, string externalId, string email, string fullName)
         {
             var emailNorm = email.Trim().ToLowerInvariant();
 
@@ -88,7 +88,6 @@ namespace AuthService.Services
                     PasswordHash = provider,
                     AuthProvider = provider,
                     ExternalId = externalId,
-                    AvatarUrl = avatarUrl,
                     Currency = "INR",
                     Role = "User",
                     IsActive = true
@@ -103,9 +102,6 @@ namespace AuthService.Services
                     user.AuthProvider = provider;
                     user.ExternalId = externalId;
                 }
-
-                if(string.IsNullOrEmpty(user.AvatarUrl) && !string.IsNullOrEmpty(avatarUrl))
-                    user.AvatarUrl = avatarUrl;
             }
 
             user.LastLoginAt = DateTime.UtcNow;
@@ -128,7 +124,6 @@ namespace AuthService.Services
                         ?? throw new KeyNotFoundException($"User {userId} not found.");
 
             if(!string.IsNullOrWhiteSpace(dto.FullName)) user.FullName = dto.FullName.Trim();
-            if(dto.AvatarUrl != null) user.AvatarUrl = dto.AvatarUrl;
             if(!string.IsNullOrWhiteSpace(dto.Currency)) user.Currency = dto.Currency;
 
             await _db.SaveChangesAsync();
@@ -198,7 +193,7 @@ namespace AuthService.Services
         }
 
         private static UserResponseDTO ToResponse(UserEntity u) => new(
-            u.UserId, u.FullName, u.Email, u.Currency, u.AvatarUrl, u.Role,
+            u.UserId, u.FullName, u.Email, u.Currency, u.Role,
             u.IsActive, u.AuthProvider, u.CreatedAt, u.LastLoginAt
         );
     }

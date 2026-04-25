@@ -2,6 +2,7 @@ using System.Security.Claims;
 using AuthService.DTOs;
 using AuthService.Interface;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,17 +14,14 @@ namespace AuthService.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _auth;
-        private readonly IConfiguration _config;
 
-        public AuthController(IAuthService auth, IConfiguration config)
+        public AuthController(IAuthService auth)
         {
             _auth = auth;
-            _config = config;
         }
 
-        // ---------------- Register ----------------
         [HttpPost("register")]
-        public async Task<ActionResult<AuthResponseDTO>> Register(RegisterDTO dto) => 
+        public async Task<ActionResult<AuthResponseDTO>> Register(RegisterDTO dto) =>
             Ok(await _auth.RegisterAsync(dto));
 
         [HttpPost("login")]
@@ -44,7 +42,7 @@ namespace AuthService.Controllers
         [HttpPut("change-password")]
         public async Task<IActionResult> ChangePassword(ChangePasswordDTO dto)
         {
-            await _auth.ChangePasswordAsync(CurrentUserId(),dto);
+            await _auth.ChangePasswordAsync(CurrentUserId(), dto);
             return NoContent();
         }
 
@@ -56,7 +54,6 @@ namespace AuthService.Controllers
             return NoContent();
         }
 
-        // ---------- Admin endpoints ----------
         [Authorize(Roles = "Admin")]
         [HttpGet("users")]
         public async Task<ActionResult<IEnumerable<UserResponseDTO>>> GetAllUsers() =>
@@ -75,6 +72,7 @@ namespace AuthService.Controllers
             return NoContent();
         }
 
+        // ---------- Google OAuth ----------
         [HttpGet("google-login")]
         public IActionResult GoogleLogin([FromQuery] string? returnUrl = null)
         {
@@ -86,46 +84,47 @@ namespace AuthService.Controllers
         [HttpGet("google-callback")]
         public async Task<IActionResult> GoogleCallback([FromQuery] string? returnUrl = null)
         {
-            var result = await HttpContext.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
-            if(!result.Succeeded || result.Principal == null)
+            // After Google OAuth, identity is stored in the Cookie scheme, not Google scheme
+            var result = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            if (!result.Succeeded || result.Principal == null)
                 return Unauthorized(new { message = "Google authentication failed." });
 
-            var external = ExtractExternalUser(result.Principal,"Google");
-            if(external == null) return BadRequest(new { message = "Google did not return required claims. " });
+            var external = ExtractExternalUser(result.Principal, "Google");
+            if (external == null)
+                return BadRequest(new { message = "Google did not return required claims." });
 
             var resp = await _auth.LoginOrRegisterExternalAsync(
-                "Google",external.ExternalId, external.Email, external.FullName, external.AvatarUrl
+                "Google", external.ExternalId, external.Email, external.FullName
             );
 
-            await HttpContext.SignOutAsync(GoogleDefaults.AuthenticationScheme);
+            // Clean up the external cookie
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
-            if(!string.IsNullOrEmpty(returnUrl))
-                return Redirect($"{returnUrl}?tokens{resp.Token}");
+            if (!string.IsNullOrEmpty(returnUrl))
+                return Redirect($"{returnUrl}?token={resp.Token}");
+
             return Ok(resp);
         }
 
-        // ---------- helpers ----------
         private int CurrentUserId() =>
             int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
                     ?? throw new UnauthorizedAccessException("User identifier missing in token"));
 
-private static ExternalUser? ExtractExternalUser(ClaimsPrincipal principal, string provider)
-    {
-        var externalId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var email = principal.FindFirst(ClaimTypes.Email)?.Value
-                    ?? principal.FindFirst("urn:github:email")?.Value;
-        var fullName = principal.FindFirst(ClaimTypes.Name)?.Value
-                    ?? principal.FindFirst("name")?.Value
-                    ?? "User";
-        var avatar = principal.FindFirst("urn:github:avatar")?.Value
-                    ?? principal.FindFirst("picture")?.Value;
+        private static ExternalUser? ExtractExternalUser(ClaimsPrincipal principal, string provider)
+        {
+            var externalId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var email = principal.FindFirst(ClaimTypes.Email)?.Value
+                        ?? principal.FindFirst("urn:github:email")?.Value;
+            var fullName = principal.FindFirst(ClaimTypes.Name)?.Value
+                        ?? principal.FindFirst("name")?.Value
+                        ?? "User";
 
-        if (string.IsNullOrEmpty(externalId) || string.IsNullOrEmpty(email))
-            return null;
+            if (string.IsNullOrEmpty(externalId) || string.IsNullOrEmpty(email))
+                return null;
 
-        return new ExternalUser(externalId, email, fullName, avatar);
-    }
+            return new ExternalUser(externalId, email, fullName);
+        }
 
-    private record ExternalUser(string ExternalId, string Email, string FullName, string? AvatarUrl);
+        private record ExternalUser(string ExternalId, string Email, string FullName);
     }
 }

@@ -17,7 +17,6 @@ namespace AuthService.DTOs
 
     public record UpdateProfileDTO(
         [MaxLength(150)] string? FullName,
-        [MaxLength(150)] string? AvatarUrl,
         [MaxLength(8)] string? Currency
     );
 
@@ -41,7 +40,6 @@ namespace AuthService.DTOs
         string FullName,
         string Email,
         string Currency,
-        string? AvatarUrl,
         string Role,
         bool isActive,
         string AuthProvider,

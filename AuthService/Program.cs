@@ -24,7 +24,7 @@ builder.Host.UseSerilog();
 
 // ---------- DB ----------
 builder.Services.AddDbContext<AuthDbContext>(o =>
-    o.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    o.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ---------- DI ----------
 builder.Services.AddScoped<IAuthService, AuthServiceImpl>();
@@ -40,7 +40,7 @@ builder.Services.AddAuthentication(options =>
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultSignInScheme    = CookieAuthenticationDefaults.AuthenticationScheme;
 })
-// Cookie scheme is required by Google/GitHub handlers to temporarily persist the external identity.
+// Cookie scheme is required by Google handlers to temporarily persist the external identity.
 .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, o =>
 {
     o.Cookie.Name = "SpendSmart.External";
@@ -70,15 +70,6 @@ builder.Services.AddAuthentication(options =>
     o.SaveTokens = true;
     o.Scope.Add("email");
     o.Scope.Add("profile");
-})
-.AddGitHub(GitHubAuthenticationDefaults.AuthenticationScheme, o =>
-{
-    o.ClientId     = builder.Configuration["Authentication:GitHub:ClientId"]     ?? "github-client-id";
-    o.ClientSecret = builder.Configuration["Authentication:GitHub:ClientSecret"] ?? "github-client-secret";
-    o.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    o.CallbackPath = "/signin-github";
-    o.SaveTokens = true;
-    o.Scope.Add("user:email");
 });
 
 builder.Services.AddAuthorization();

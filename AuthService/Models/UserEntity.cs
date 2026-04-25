@@ -15,15 +15,12 @@ public class UserEntity
     [Required, MaxLength(200)]
     public string Email { get; set; } = string.Empty;
 
-    // Nullable because OAuth (Google/GitHub) users may not have a local password.
+    // Nullable because OAuth (Google) users may not have a local password.
     public string? PasswordHash { get; set; }
 
     // ISO 4217 currency code — INR, USD, GBP, etc.
     [MaxLength(8)]
     public string Currency { get; set; } = "INR";
-
-    [MaxLength(500)]
-    public string? AvatarUrl { get; set; }
 
     [MaxLength(30)]
     public string Role { get; set; } = "User"; // User or Admin
@@ -32,10 +29,10 @@ public class UserEntity
 
     // OAuth provider metadata
     [MaxLength(30)]
-    public string AuthProvider { get; set; } = "Local"; // Local | Google | GitHub
+    public string AuthProvider { get; set; } = "Local"; // Local | Google 
 
     [MaxLength(200)]
-    public string? ExternalId { get; set; } // sub (Google) / id (GitHub)
+    public string? ExternalId { get; set; } // sub (Google)
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAt { get; set; }
