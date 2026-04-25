@@ -4,7 +4,7 @@ using ExpenseService.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ExpenseService.Conrollers
+namespace ExpenseService.Controllers
 {
     [ApiController]
     [Authorize]
