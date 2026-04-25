@@ -13,7 +13,7 @@ namespace CategoryService.Data
             modelBuilder.Entity<CategoryEntity>(b =>
             {
                 b.HasIndex(c => new { c.UserId, c.Name });
-                b.Property(c => c.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+                b.Property(c => c.CreatedAt).HasDefaultValueSql("NOW()");
             });
 
             // System-default categories (UserId = null, IsDefault = true, visible to all users)
